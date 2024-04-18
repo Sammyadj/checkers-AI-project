@@ -1,7 +1,6 @@
 import tkinter as tk
-from constants import  ROWS, COLS, BLACK, WHITE, RED, GREY, SQUARE_SIZE, CROWN
+from constants import ROWS, COLS, BLACK, WHITE, RED, GREY, SQUARE_SIZE, CROWN
 from piece import Piece
-from copy import deepcopy
 
 
 class Square:
@@ -30,21 +29,19 @@ class Square:
 
     def is_occupied(self):
         return self.piece is not None
-    
+
     def __repr__(self):
         if self.piece:
             return f"{self.piece}"
         return "Empty"
 
 
-
-
-class Board():
+class Board:
     def __init__(self, game=None):
         self.game = game
         self.crown_image = None
-        self.board = [[Square() for _ in range(COLS)] for _ in range(ROWS)] # 8x8 board
-        self.red_left = self.white_left = 12 # Number of pieces each player has
+        self.board = [[Square() for _ in range(COLS)] for _ in range(ROWS)]  # 8x8 board
+        self.red_left = self.white_left = 12  # Number of pieces each player has
         self.red_kings = self.white_kings = 0
         # self.load_images()
         self.setup_board()
@@ -73,38 +70,27 @@ class Board():
         except Exception as e:
             print(f"Failed to load crown image: {e}")
 
-    def draw_squares(self, canvas):
+    @staticmethod
+    def draw_squares(canvas):
         canvas.config(bg=GREY)
         for row in range(ROWS):
-            for col in range((row +1) % 2, ROWS, 2):
+            for col in range((row + 1) % 2, ROWS, 2):
                 x0 = col * SQUARE_SIZE
                 y0 = row * SQUARE_SIZE
                 x1 = x0 + SQUARE_SIZE
                 y1 = y0 + SQUARE_SIZE
                 canvas.create_rectangle(x0, y0, x1, y1, fill=BLACK, outline="")
 
-
     def setup_board(self):
         for row in range(ROWS):
             for col in range(COLS):
-                self.board[row][col].set_position(row, col)
-                if row % 2 == ((col + 1) % 2):  # if the square is black
+                if row % 2 == ((col + 1) % 2):
                     if row < 3:
-                        self.board[row][col].place_piece(Piece(row, col, WHITE, self.crown_image)) # Place white pieces
+                        piece = Piece(row, col, WHITE, self, self.crown_image)
+                        self.board[row][col].place_piece(piece)
                     elif row > 4:
-                        self.board[row][col].place_piece(Piece(row, col, RED, self.crown_image)) # Place red pieces
-
-    # def setup_board(self):
-    #     for row in range(ROWS):
-    #         for col in range(COLS):
-    #             if row % 2 == ((col + 1) % 2):  # if the square is black
-    #                 if row < 3:
-    #                     # Ensure that the crown_image is being passed here
-    #                     self.board[row][col].place_piece(Piece(row, col, WHITE, self.crown_image))
-    #                 elif row > 4:
-    #                     self.board[row][col].place_piece(Piece(row, col, RED, self.crown_image))
-
-
+                        piece = Piece(row, col, RED, self, self.crown_image)
+                        self.board[row][col].place_piece(piece)
 
     def draw(self, canvas):
         try:
@@ -117,7 +103,6 @@ class Board():
             print(f"Error drawing board: {e}")
             raise e
 
-
     def move_piece(self, start_row, start_col, end_row, end_col):
         piece = self.get_piece(start_row, start_col)
         if piece and not self.is_square_occupied(end_row, end_col):
@@ -127,7 +112,6 @@ class Board():
 
             # Update the piece's position
             piece.move(end_row, end_col)
-            
 
             # Promote to king if it reaches the last row and is not already a king
             if end_row in [0, ROWS - 1] and not piece.king:
@@ -139,7 +123,6 @@ class Board():
                 else:
                     self.white_kings += 1
                     print(f"White kings increased in white king's row: {self.white_kings}")
-
 
     # Remove the captured piece(s) from the board
     def remove(self, captures, capturing_piece):
@@ -160,8 +143,6 @@ class Board():
                         print(f"White kings increased by regicide: {self.white_kings}")
         return regicide_occurred
 
-
-
     def update_pieces_left(self, piece):
         if piece.color == RED:
             self.red_left -= 1
@@ -175,7 +156,6 @@ class Board():
             if piece.king:
                 self.white_kings -= 1
                 print(f"White kings left: {self.white_kings}")
-
 
     def winner(self):
         # Check if either player has no pieces left
@@ -207,8 +187,6 @@ class Board():
                         return True  # There is at least one move available
         return False  # No moves available for this color
 
-
-    
     # HELPER FUNCTIONS:
     # Check if the square is occupied
     def is_square_occupied(self, row, col):
@@ -218,7 +196,6 @@ class Board():
                 return True
         return False
 
-
     # Get the square at the given row and column
     def get_square(self, row, col):
         """Return the Square object at the specified location on the board"""
@@ -227,25 +204,20 @@ class Board():
         except IndexError:
             return None
 
-
-    def _on_board(self, row, col):
+    @staticmethod
+    def _on_board(row, col):
         return 0 <= row < ROWS and 0 <= col < COLS
-    
+
     def get_piece(self, row, col):
         """Return the Piece object at the specified location on the board"""
         if self._on_board(row, col):
             return self.board[row][col].piece
         return None
 
-
-
     # Check if the square is occupied by an opponent piece
     def is_opponent(self, piece, row, col):
         opponent = self.get_piece(row, col)
         return opponent and opponent.color != piece.color
-    
-    # def get_capture_directions(self, piece):
-    #     return [(-1, -1), (-1, 1), (1, -1), (1, 1)] if piece.king else ([(1, 1), (1, -1)] if piece.color == WHITE else [(-1, -1), (-1, 1)])
 
     # Check if a piece can capture an opponent piece
     def can_capture(self, piece, next_row, next_col, jump_row, jump_col, visited):
@@ -263,20 +235,21 @@ class Board():
 
         # All conditions are met, capture is possible
         return True
-    
-    def get_movement_directions(self, piece):
+
+    @staticmethod
+    def get_movement_directions(piece):
         if piece.king:
             return [(-1, -1), (-1, 1), (1, -1), (1, 1)]  # Kings move in all four diagonal directions
         else:
-            return [(1, -1), (1, 1)] if piece.color == WHITE else [(-1, -1), (-1, 1)]  # Non-kings move forward diagonally
+            return [(1, -1), (1, 1)] if piece.color == WHITE else [(-1, -1),
+                                                                   (-1, 1)]  # Non-kings move forward diagonally
 
     # MOVES AND CAPTURES LOGIC:
     # Get the valid moves for the selected piece
-
     def get_valid_moves(self, piece, row, col):
         valid_moves = {}
         captures = self.compute_capture_paths(piece, row, col)
-        
+
         # Check if there are any captures, if not, consider normal moves
         if not any(captures.values()):  # If there are no capture paths
             directions = self.get_movement_directions(piece)
@@ -293,9 +266,6 @@ class Board():
             valid_moves.update(captures)
         return valid_moves
 
-    
-
-
     def compute_capture_paths(self, piece, start_row, start_col, path=None, visited=None, captures=None):
         if path is None:
             path = []
@@ -308,15 +278,16 @@ class Board():
         directions = self.get_movement_directions(piece)
         for dr, dc in directions:
             next_row, next_col = start_row + dr, start_col + dc
-            jump_row, jump_col = start_row + 2*dr, start_col + 2*dc
+            jump_row, jump_col = start_row + 2 * dr, start_col + 2 * dc
             if self._on_board(next_row, next_col) and self._on_board(jump_row, jump_col):
-                if (jump_row, jump_col) not in visited and self.can_capture(piece, next_row, next_col, jump_row, jump_col, visited):
+                if (jump_row, jump_col) not in visited and self.can_capture(piece, next_row, next_col, jump_row,
+                                                                            jump_col, visited):
                     visited.add((jump_row, jump_col))  # Prevent revisiting
                     captures.append((next_row, next_col))
                     new_path = path + [(jump_row, jump_col)]
                     subsequent_captures = self.compute_capture_paths(
                         piece, jump_row, jump_col, new_path, visited.copy(), captures.copy())
-                    
+
                     if subsequent_captures:
                         moves.update(subsequent_captures)
                     else:
@@ -328,77 +299,6 @@ class Board():
                     captures.pop()
                     visited.remove((jump_row, jump_col))
         return moves
-    
-    def remove_piece_at(self, row, col):
-        print(f"Removing piece at ({row}, {col})")
-        piece = self.get_piece(row, col)
-        if piece:
-            self.update_pieces_left(piece)
-            self.board[row][col] = None
 
     def __repr__(self):
         return f"{self.board}"
-    
-
-    # def evaluate(self, color):
-    #     # Initialize scores
-    #     red_score = 0
-    #     white_score = 0
-
-    #     # Iterate over each square on the board
-    #     for row in self.board:
-    #         for square in row:
-    #             if square is not None and square.piece:  # Ensure there is a piece on the square
-    #                 if square.piece.color == RED:
-    #                     # Add 3 points for kings, 1 point for regular pieces
-    #                     red_score += 3 if square.piece.king else 1
-    #                 elif square.piece.color == WHITE:
-    #                     white_score += 3 if square.piece.king else 1
-
-    #     # Evaluate based on the perspective of the current player
-    #     if color == RED:
-    #         return red_score - white_score
-    #     else:
-    #         return white_score - red_score
-
-
-    # def evaluate(self, board):
-    #     red_score = len([p for row in board for p in row if p and p.color == RED])
-    #     white_score = len([p for row in board for p in row if p and p.color == WHITE])
-    #     red_kings = len([p for row in board for p in row if p and p.color == RED and p.king])
-    #     white_kings = len([p for row in board for p in row if p and p.color == WHITE and p.king])
-    #     score = (white_score + 2 * white_kings) - (red_score + 2 * red_kings)
-    #     return score if self.turn == WHITE else -score
-
-    
-    
-
-
-
-    # def get_successor_states(self, color):
-    #     successors = []
-    #     for row in range(ROWS):
-    #         for col in range(COLS):
-    #             piece = self.get_piece(row, col)
-    #             if piece and piece.color == color:
-    #                 moves = self.get_valid_moves(piece, row, col)
-    #                 for move, info in moves.items():
-    #                     # Clone the board to create a new state
-    #                     new_board = self.clone()
-    #                     new_board.move_piece(row, col, *move)
-    #                     if info['captures']:
-    #                         for cap in info['captures']:
-    #                             new_board.remove_piece_at(*cap)
-    #                     successors.append(new_board)
-    #     return successors
-
-
-
-    # def clone(self):
-    #     new_board = Board()
-    #     new_board.board = [deepcopy(row) for row in self.board]  # Use deepcopy if necessary
-    #     new_board.red_left = self.red_left
-    #     new_board.white_left = self.white_left
-    #     new_board.red_kings = self.red_kings
-    #     new_board.white_kings = self.white_kings
-    #     return new_board

@@ -1,16 +1,17 @@
-from constants import SQUARE_SIZE, ROWS, COLS
+from constants import SQUARE_SIZE
 
 
-class Piece():
+class Piece:
     PADDING = 15
     OUTLINE = 2
 
-    def __init__(self, row, col, color, crown_image=None):
+    def __init__(self, row, col, color, board, crown_image=None):
         self.row = row
         self.col = col
         self.color = color
+        self.board = board
         self.king = False
-        self.crown = crown_image
+        self.crown = crown_image if crown_image else board.crown_image
         self.is_highlighted = False
         self.is_valid_move_highlighted = False
 
@@ -19,12 +20,13 @@ class Piece():
         self.y = 0
         self.calc_position()
 
+
     def clone(self):
-        new_piece = Piece(self.row, self.col, self.color, self.crown)
+        # Ensure that the board instance is passed to the new cloned piece
+        new_piece = Piece(self.row, self.col, self.color, self.board, self.crown)
         new_piece.king = self.king
         new_piece.is_highlighted = self.is_highlighted
         new_piece.is_valid_move_highlighted = self.is_valid_move_highlighted
-        # Recalculate position for the new piece
         new_piece.calc_position()
         return new_piece
 
@@ -33,9 +35,14 @@ class Piece():
         self.x = SQUARE_SIZE * self.col + SQUARE_SIZE // 2
         self.y = SQUARE_SIZE * self.row + SQUARE_SIZE // 2
 
+    # def make_king(self):
+    #     self.king = True
+    #     print(f"Made {self.color} piece at ({self.row}, {self.col}) a king.")
+
     def make_king(self):
         self.king = True
-        print(f"Made {self.color} piece at ({self.row}, {self.col}) a king.")
+        if not self.crown:  # Set the crown image from the board if not already set
+            self.crown = self.board.crown_image
 
     def draw(self, canvas):
         # Calculate the radius for the piece
@@ -57,8 +64,6 @@ class Piece():
                 self.x + radius + 5, self.y + radius + 5,
                 outline='green', width=2
             )
-
-        print(f"Piece at ({self.row}, {self.col}) - King: {self.king}, Crown: {self.crown is not None}")
 
         # If the piece is a king, draw the crown image on top of it
         if self.king and self.crown:

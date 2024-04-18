@@ -58,8 +58,6 @@ class Game:
                     self.selected = (row, col)  # Select the new piece
                     self.valid_moves = valid_moves[(row, col)]  # Update valid moves for the new selection
                 else:
-                    # self.board.get_piece(selected_row, selected_col).toggle_highlight()  # Remove highlight if no valid moves
-                    # self.selected = None
                     return
 
         elif current_piece and current_piece.color == self.turn and (row, col) in valid_moves:
@@ -165,10 +163,10 @@ class Game:
 
     # Update the game state upon turn change
     def change_turn(self):
-        self.check_winner()
         self.turn = RED if self.turn == WHITE else WHITE
         self.valid_moves = {}
         self.clear_valid_move_highlights()  # Clear highlights from all pieces
+        self.check_winner()
         self.update()
 
         # Check if the next player is AI and trigger AI move
@@ -178,8 +176,6 @@ class Game:
             player_valid_moves = self.find_player_valid_moves()
             self.highlight_pieces_with_moves(player_valid_moves)
 
-    # def get_board(self):
-    #     return self.board
 
     def end_turn(self):
         if self.check_winner():
@@ -211,18 +207,18 @@ class Game:
         if maximizing_player:
             max_eval = float('-inf')
             for _, successor in self.get_successors(board):
-                eval = self.minimax(successor, depth - 1, alpha, beta, False)
-                max_eval = max(max_eval, eval)
-                alpha = max(alpha, eval)
+                _eval = self.minimax(successor, depth - 1, alpha, beta, False)
+                max_eval = max(max_eval, _eval)
+                alpha = max(alpha, _eval)
                 if beta <= alpha:
                     break
             return max_eval
         else:
             min_eval = float('inf')
             for _, successor in self.get_successors(board):
-                eval = self.minimax(successor, depth - 1, alpha, beta, True)
-                min_eval = min(min_eval, eval)
-                beta = min(beta, eval)
+                _eval = self.minimax(successor, depth - 1, alpha, beta, True)
+                min_eval = min(min_eval, _eval)
+                beta = min(beta, _eval)
                 if beta <= alpha:
                     break
             return min_eval
@@ -256,28 +252,73 @@ class Game:
         score = (board.white_left - board.red_left) + (board.white_kings * 1.5 - board.red_kings * 1.5)
         return score if self.turn == WHITE else -score
 
+    # def evaluate_strategic(self, board):
+    #     score = 0
+    #     for row in range(len(board.board)):
+    #         for col in range(len(board.board[row])):
+    #             piece = board.get_piece(row, col)
+    #             if piece:
+    #                 # Calculate positional value
+    #                 position_value = 1 + (7 - abs(3.5 - col)) * 0.1  # central pieces are slightly more valuable
+    #                 if piece.color == WHITE:
+    #                     score += position_value * (1 if not piece.king else 1.5)
+    #                 else:
+    #                     score -= position_value * (1 if not piece.king else 1.5)
+    #
+    #                 # Calculate mobility value
+    #                 moves = len(board.get_valid_moves(piece, row, col))
+    #                 mobility_value = moves * 0.1
+    #                 if piece.color == WHITE:
+    #                     score += mobility_value
+    #                 else:
+    #                     score -= mobility_value
+    #
+    #     return score if self.turn == WHITE else -score
+
     def evaluate_strategic(self, board):
         score = 0
         for row in range(len(board.board)):
             for col in range(len(board.board[row])):
                 piece = board.get_piece(row, col)
                 if piece:
-                    # Calculate positional value
-                    position_value = 1 + (7 - abs(3.5 - col)) * 0.1  # central pieces are slightly more valuable
-                    if piece.color == WHITE:
-                        score += position_value * (1 if not piece.king else 1.5)
-                    else:
-                        score -= position_value * (1 if not piece.king else 1.5)
-
-                    # Calculate mobility value
+                    # Calculate positional and mobility values as before
+                    position_value = 1 + (7 - abs(3.5 - col)) * 0.1
                     moves = len(board.get_valid_moves(piece, row, col))
                     mobility_value = moves * 0.1
-                    if piece.color == WHITE:
-                        score += mobility_value
-                    else:
-                        score -= mobility_value
+
+                    # Check for vulnerability
+                    if self.piece_vulnerable(board, piece, row, col):
+                        vulnerability_penalty = -3  # Assign a penalty for risky positions
+
+                        # Apply calculated values
+                        piece_value = (position_value + mobility_value + (vulnerability_penalty if piece.color == WHITE else -vulnerability_penalty))
+                        score += piece_value if piece.color == WHITE else -piece_value
 
         return score if self.turn == WHITE else -score
+
+    def piece_vulnerable(self, board, piece, row, col):
+        # Simulate moving the piece to the position and check if any opponent moves can capture it
+        original_row, original_col = piece.row, piece.col
+        # Temporarily move the piece
+        board.board[original_row][original_col].remove_piece()
+        board.board[row][col].place_piece(piece)
+        opponent_color = RED if piece.color == WHITE else WHITE
+
+        # Check all opponent moves for captures
+        for orow in range(len(board.board)):
+            for ocol in range(len(board.board[orow])):
+                opponent_piece = board.get_piece(orow, ocol)
+                if opponent_piece and opponent_piece.color == opponent_color:
+                    if any(move['captures'] for move in board.get_valid_moves(opponent_piece, orow, ocol).values()):
+                        # Restore the piece to its original position
+                        board.board[row][col].remove_piece()
+                        board.board[original_row][original_col].place_piece(piece)
+                        return True
+
+        # Restore the piece to its original position
+        board.board[row][col].remove_piece()
+        board.board[original_row][original_col].place_piece(piece)
+        return False
 
     def evaluate_defensive(self, board):
         score = 0
@@ -368,9 +409,9 @@ class Game:
         directions = [(-dr, -dc) for dr, dc in
                       self.board.get_movement_directions(piece)]  # Reverse directions for potential protectors
         for dr, dc in directions:
-            friend_row, friend_col = row + dr, col + dc
-            if self.board._on_board(friend_row, friend_col):
-                friend_piece = self.board.get_piece(friend_row, friend_col)
+            opponent_row, opponent_col = row + dr, col + dc
+            if self.board._on_board(opponent_row, opponent_col):
+                friend_piece = self.board.get_piece(opponent_row, opponent_col)
                 if friend_piece and friend_piece.color == piece.color:
                     return True  # Protected by another friendly piece
 
