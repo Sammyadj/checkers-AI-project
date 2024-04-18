@@ -66,7 +66,6 @@ class Board:
         #     self.crown_image = tk.PhotoImage(file=CROWN).subsample(64, 64)
         try:
             self.crown_image = tk.PhotoImage(file=CROWN).subsample(64, 64)
-            print("Crown image loaded successfully.")
         except Exception as e:
             print(f"Failed to load crown image: {e}")
 

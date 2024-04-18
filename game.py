@@ -4,26 +4,30 @@ from tkinter import messagebox
 
 
 class Game:
-    def __init__(self, canvas, difficulty='easy'):
+    def __init__(self, canvas=None, difficulty='easy', simulation_mode=False):
         self.canvas = canvas
+        self.simulation_mode = simulation_mode
         self.difficulty = difficulty
-        self._init()
-
-    def _init(self):
-
+        self.board = Board(self) if simulation_mode else self._init()
         self.selected = None
-        self.board = Board(self)
         self.turn = RED
-        self.valid_moves = {}  # Store the valid moves for the selected piece
+        self.valid_moves = {}
+        self.board = Board(self)
+        if not simulation_mode:
+            self.setup_ui_game()
+
+    def setup_ui_game(self):
+        """Setup the game with UI-specific configurations."""
         player_valid_moves = self.find_player_valid_moves()
         self.highlight_pieces_with_moves(player_valid_moves)
         self.update()
 
     def update(self):
-        self.board.draw(self.canvas)
-        self.draw_valid_moves(self.valid_moves)  # Draw the valid moves
-        if self.turn == WHITE:
-            print("AI is thinking...")
+        if not self.simulation_mode and self.canvas:
+            self.board.draw(self.canvas)
+            self.draw_valid_moves(self.valid_moves)  # Draw the valid moves
+            if self.turn == WHITE:
+                print("AI is thinking...")
 
     def reset(self):
         self._init()
@@ -70,7 +74,8 @@ class Game:
     def _move(self, start_row, start_col, end_row, end_col):
         if self.selected and (end_row, end_col) in self.valid_moves:
             moving_piece = self.board.get_piece(start_row, start_col)
-            moving_piece.toggle_highlight()  # Toggle highlight off before moving
+            if not self.simulation_mode and self.canvas:
+                moving_piece.toggle_highlight()  # Toggle highlight off before moving
             self.board.move_piece(start_row, start_col, end_row, end_col)
 
             move_info = self.valid_moves[(end_row, end_col)]
@@ -109,7 +114,7 @@ class Game:
                     outline='blue', fill='', width=2
                 )
 
-        # # Optionally draw a different style if the move involves a capture
+        # # draw a different style if the move involves a capture
         # if captures:
         #     for cap in captures:
         #         capture_row, capture_col = cap
@@ -252,28 +257,6 @@ class Game:
         score = (board.white_left - board.red_left) + (board.white_kings * 1.5 - board.red_kings * 1.5)
         return score if self.turn == WHITE else -score
 
-    # def evaluate_strategic(self, board):
-    #     score = 0
-    #     for row in range(len(board.board)):
-    #         for col in range(len(board.board[row])):
-    #             piece = board.get_piece(row, col)
-    #             if piece:
-    #                 # Calculate positional value
-    #                 position_value = 1 + (7 - abs(3.5 - col)) * 0.1  # central pieces are slightly more valuable
-    #                 if piece.color == WHITE:
-    #                     score += position_value * (1 if not piece.king else 1.5)
-    #                 else:
-    #                     score -= position_value * (1 if not piece.king else 1.5)
-    #
-    #                 # Calculate mobility value
-    #                 moves = len(board.get_valid_moves(piece, row, col))
-    #                 mobility_value = moves * 0.1
-    #                 if piece.color == WHITE:
-    #                     score += mobility_value
-    #                 else:
-    #                     score -= mobility_value
-    #
-    #     return score if self.turn == WHITE else -score
 
     def evaluate_strategic(self, board):
         score = 0
@@ -437,3 +420,28 @@ class Game:
                 return False  # Red regular pieces must move downward
 
         return True  # The move is possible and could potentially protect another piece
+
+
+
+    # def evaluate_strategic(self, board):
+    #     score = 0
+    #     for row in range(len(board.board)):
+    #         for col in range(len(board.board[row])):
+    #             piece = board.get_piece(row, col)
+    #             if piece:
+    #                 # Calculate positional value
+    #                 position_value = 1 + (7 - abs(3.5 - col)) * 0.1  # central pieces are slightly more valuable
+    #                 if piece.color == WHITE:
+    #                     score += position_value * (1 if not piece.king else 1.5)
+    #                 else:
+    #                     score -= position_value * (1 if not piece.king else 1.5)
+    #
+    #                 # Calculate mobility value
+    #                 moves = len(board.get_valid_moves(piece, row, col))
+    #                 mobility_value = moves * 0.1
+    #                 if piece.color == WHITE:
+    #                     score += mobility_value
+    #                 else:
+    #                     score -= mobility_value
+    #
+    #     return score if self.turn == WHITE else -score
