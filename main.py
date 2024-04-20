@@ -47,7 +47,7 @@ def main():
                            command=lambda: set_difficulty(difficulty_var.get()))
         b.pack()
 
-    game = Game(canvas, difficulty=difficulty_var.get())
+    game = Game(canvas, root, difficulty=difficulty_var.get())
     game.board.load_images()
 
     reset_button = tk.Button(root, text="Reset Game", command=game.reset)
