@@ -2,6 +2,7 @@ from constants import RED, WHITE, ROWS, COLS, SQUARE_SIZE
 from board import Board
 from tkinter import messagebox
 import traceback
+import time
 
 
 class Game:
@@ -9,12 +10,14 @@ class Game:
         self.canvas = canvas
         self.root = root
         self.difficulty = difficulty
+        self.sorted_moves = None
         self._init()
 
     def _init(self):
 
         self.selected = None
         self.board = Board(self)
+        self.board.load_images()
         self.turn = RED
         self.valid_moves = {}  # Store the valid moves for the selected piece
         player_valid_moves = self.find_player_valid_moves()
@@ -74,7 +77,7 @@ class Game:
     def select(self, row, col):
         current_piece = self.board.get_piece(row, col)
         print("Selected:", self.selected, "Current:", (row, col))
-        self.board.draw(self.canvas)
+        # self.board.draw(self.canvas)
 
         if self.selected == (row, col):  # Deselect if the same piece is clicked
             print("Same piece clicked")
@@ -91,8 +94,8 @@ class Game:
             if (row, col) in self.valid_moves:  # Move if a valid move is clicked
                 self._move(selected_row, selected_col, row, col)
                 self.selected = None  # Deselect the piece after moving
-                # self.update()  # Only update here after a move
-                self.board.draw(self.canvas)
+                self.update()  # Only update here after a move
+                # self.board.draw(self.canvas)
                 return
             elif current_piece and current_piece.color == self.turn and (row, col) in valid_moves:
                 self.board.get_piece(selected_row, selected_col).toggle_highlight()  # Remove highlight
@@ -107,8 +110,8 @@ class Game:
             self.selected = (row, col)
             self.valid_moves = valid_moves[(row, col)]
 
-        # self.update()
-        self.draw_valid_moves(self.valid_moves)
+        self.update()
+        # self.draw_valid_moves(self.valid_moves)
 
     def _move(self, start_row, start_col, end_row, end_col):
         if self.selected and (end_row, end_col) in self.valid_moves:
@@ -123,11 +126,11 @@ class Game:
                 if regicide_occurred:
                     self.end_turn()
                     return True
-            # self.end_turn()
+            self.end_turn()
             # self.selected = None
-            self.board.draw(self.canvas)
+            # self.board.draw(self.canvas)
             # self.root.after(100, self.change_turn)
-            self.change_turn()
+            # self.change_turn()
             return True
         return False
 
@@ -195,17 +198,28 @@ class Game:
                         piece.unhighlight_valid_move()
         # self.update()
 
+    # def check_winner(self, board=None):
+    #     if board is None:
+    #         board = self.board  # Fallback to the main game board if none provided
+    #     if not board:
+    #         print("No board available to check winner.")
+    #         return False  # Safeguard against None board
+    #     winner = board.winner()
+    #     if winner:
+    #         print(f'{winner} has won the game!')
+    #         # self.update()
+    #         messagebox.showinfo("Game Over", f"{winner} has won the game!")
+    #         return True
+    #     return False
+
     def check_winner(self, board=None):
         if board is None:
-            board = self.board  # Fallback to the main game board if none provided
+            board = self.board
         if not board:
-            print("No board available to check winner.")
-            return False  # Safeguard against None board
+            return False
         winner = board.winner()
         if winner:
-            print(f'{winner} has won the game!')
-            self.update()
-            messagebox.showinfo("Game Over", f"{winner} has won the game!")
+            self.winner = winner  # Store the winner for later use
             return True
         return False
 
@@ -214,47 +228,49 @@ class Game:
         self.turn = RED if self.turn == WHITE else WHITE
         self.valid_moves = {}
         self.clear_valid_move_highlights()  # Clear highlights from all pieces
-        self.selected = None
-        self.board.draw(self.canvas)
-        self.check_winner()
-        # self.update()
-
         # Check if the next player is AI and trigger AI move
         if self.turn == WHITE:
-            self.ai_turn()
+            self.root.after(50, self.ai_turn)
         else:
             player_valid_moves = self.find_player_valid_moves()
             self.highlight_pieces_with_moves(player_valid_moves)
 
     def end_turn(self):
-        # if self.check_winner():
-        #     return
         self.selected = None
         self.change_turn()
-        if not self.check_winner():
-            return
         self.update()
+        self.root.after(50, self.post_update_check_winner)  # Short delay to update UI before checking winner
+        # if self.check_winner():
+        #     self.handle_game_end()
+
+    def post_update_check_winner(self):
+        if self.check_winner():
+            self.handle_game_end()
+
+    def handle_game_end(self):
+        # Disable further interactions or reset the game here if needed
+        self.update()
+        print(f"{self.winner} has won the game!")
+        messagebox.showinfo("Game Over", f"{self.winner} has won the game! Press 'Reset Game' to play again.")
+        self.root.after(100, self.reset)
 
     def ai_turn(self):
-        # if self.check_winner():
-        #     return
+        if self.check_winner():
+            return
         best_score = float('-inf')
-        best_move = None
+        # best_move = None
         best_board = None
         for move, cloned_board in self.get_successors(self.board):
             score = self.minimax(cloned_board, 6, -float('inf'), float('inf'), True)
             if score > best_score:
                 best_score = score
-                best_move = move
+                # best_move = move
                 best_board = cloned_board
 
         # AI's move results in a new board state that should be committed
         if best_board is not None:
             self.board = best_board
             print("AI moved")
-            # self.end_turn()
-            # self.change_turn()
-            # self.update()
         else:
             print("No valid moves available for AI")
         self.end_turn()

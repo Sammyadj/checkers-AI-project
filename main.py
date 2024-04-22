@@ -48,7 +48,6 @@ def main():
         b.pack()
 
     game = Game(canvas, root, difficulty=difficulty_var.get())
-    game.board.load_images()
 
     reset_button = tk.Button(root, text="Reset Game", command=game.reset)
     reset_button.pack(side=tk.LEFT, padx=10, pady=10)
