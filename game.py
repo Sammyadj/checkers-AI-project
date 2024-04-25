@@ -81,7 +81,6 @@ class Game:
                     self.end_turn()
                     return True
             self.end_turn()
-            # self.selected = None
             return True
         return False
 
