@@ -2,6 +2,18 @@ from constants import SQUARE_SIZE
 
 
 class Piece:
+    """A class to represent a checkers piece on the board.
+    Attributes:
+        row (int): The row index of the piece on the board.
+        col (int): The column index of the piece on the board.
+        color (str): The color of the piece ('white' or 'red').
+        board (Board): The board instance on which the piece is placed.
+        king (bool): A boolean flag to indicate if the piece is a king.
+        crown (PhotoImage): The crown image to display on a king piece.
+        is_highlighted (bool): A boolean flag to indicate if the piece is highlighted.
+        is_valid_move_highlighted (bool): A boolean flag to indicate if the piece is highlighted as a valid move.
+        x (int): The x-coordinate of the piece on the board.
+        y (int): The y-coordinate of the piece on the board."""
     PADDING = 15
     OUTLINE = 2
 
@@ -69,21 +81,6 @@ class Piece:
         if self.king and self.crown:
             print("Drawing crown image.")
             canvas.create_image(self.x, self.y, image=self.crown)
-
-    # def draw(self, canvas):
-    #     # Calculate the radius for the piece
-    #     radius = SQUARE_SIZE // 2 - self.PADDING
-    #     outline_color = 'yellow' if self.is_highlighted else ''
-    #     outline_width = 4 if self.is_highlighted else 0
-    #     # Draw the piece on the board
-    #     if self.is_highlighted:
-    #         canvas.create_oval(
-    #             self.x - radius, self.y - radius,
-    #             self.x + radius, self.y + radius,
-    #             fill=self.color, outline=outline_color, width=outline_width)
-
-    #         if self.king and self.crown:
-    #             canvas.create_image(self.x, self.y, image=self.crown)
 
     def toggle_highlight(self):
         self.is_highlighted = not self.is_highlighted  # Toggle the highlight state

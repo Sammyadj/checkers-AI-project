@@ -4,6 +4,12 @@ from piece import Piece
 
 
 class Square:
+    """A square on the board that can be occupied by a piece.
+    Attributes:
+        piece (Piece): The piece occupying the square
+        row (int): The row index of the square
+        col (int): The column index of the square
+        """
     def __init__(self, piece=None):
         self.piece = piece
         self.row = None
@@ -37,6 +43,16 @@ class Square:
 
 
 class Board:
+    """A class to represent the game board.
+    Attributes:
+        game (Game): The game instance
+        crown_image (PhotoImage): The image for the king piece
+        board (list): A 2D list representing the board
+        red_left (int): The number of red pieces left
+        white_left (int): The number of white pieces left
+        red_kings (int): The number of red kings
+        white_kings (int): The number of white kings
+    """
     def __init__(self, game=None):
         self.game = game
         self.crown_image = None
@@ -104,6 +120,7 @@ class Board:
             raise e
 
     def move_piece(self, start_row, start_col, end_row, end_col):
+        """Move the piece from the start position to the end position on the board."""
         piece = self.get_piece(start_row, start_col)
         if piece and not self.is_square_occupied(end_row, end_col):
             # Move the piece
@@ -115,14 +132,11 @@ class Board:
 
             # Promote to king if it reaches the last row and is not already a king
             if end_row in [0, ROWS - 1] and not piece.king:
-                print("Assigning crown image to a white piece.")
                 piece.make_king()
                 if piece.color == RED:
                     self.red_kings += 1
-                    print(f"Red kings increased in white king's row: {self.red_kings}")
                 else:
                     self.white_kings += 1
-                    print(f"White kings increased in white king's row: {self.white_kings}")
 
     # Remove the captured piece(s) from the board
     def remove(self, captures, capturing_piece):
@@ -165,7 +179,6 @@ class Board:
             return RED
 
         # Check for no available moves for either player
-        # We assume that this method is called after a player's turn is complete
         red_moves_available = self.check_moves_available(RED)
         white_moves_available = self.check_moves_available(WHITE)
 
@@ -247,11 +260,14 @@ class Board:
     # MOVES AND CAPTURES LOGIC:
     # Get the valid moves for the selected piece
     def get_valid_moves(self, piece, row, col):
+        """Return a dictionary of valid moves for the selected piece at the given row and column.
+        The dictionary contains the landing positions as keys and the intermediate captures as values."""
         valid_moves = {}
         captures = self.compute_capture_paths(piece, row, col)
 
         # Check if there are any captures, if not, consider normal moves
         if not any(captures.values()):  # If there are no capture paths
+            # Get the movement directions based on the piece type
             directions = self.get_movement_directions(piece)
             for dr, dc in directions:
                 next_row = row + dr
@@ -267,6 +283,9 @@ class Board:
         return valid_moves
 
     def compute_capture_paths(self, piece, start_row, start_col, path=None, visited=None, captures=None):
+        """Recursively compute all possible capture paths for the selected piece.
+        Returns a dictionary of capture paths with the jump position as the key and the intermediate captures as values.
+        """
         if path is None:
             path = []
         if visited is None:
@@ -279,6 +298,7 @@ class Board:
         for dr, dc in directions:
             next_row, next_col = start_row + dr, start_col + dc
             jump_row, jump_col = start_row + 2 * dr, start_col + 2 * dc
+            # Check if capture is possible
             if self._on_board(next_row, next_col) and self._on_board(jump_row, jump_col):
                 if (jump_row, jump_col) not in visited and self.can_capture(piece, next_row, next_col, jump_row,
                                                                             jump_col, visited):
@@ -288,9 +308,10 @@ class Board:
                     subsequent_captures = self.compute_capture_paths(
                         piece, jump_row, jump_col, new_path, visited.copy(), captures.copy())
 
-                    if subsequent_captures:
+                    if subsequent_captures: # If there are more captures to be made
                         moves.update(subsequent_captures)
                     else:
+                        # No more captures, add the current path to the moves dictionary
                         moves[(jump_row, jump_col)] = {
                             'captures': captures.copy(),
                             'landing_positions': path.copy()

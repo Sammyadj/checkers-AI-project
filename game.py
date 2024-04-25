@@ -25,8 +25,8 @@ class Game:
         self.update()
 
     def update(self):
-        print("Update called from:", traceback.extract_stack()[-2].name)
-        # traceback.print_stack(limit=2)
+        # print("Update called from:", traceback.extract_stack()[-2].name)
+        # # traceback.print_stack(limit=2)
         self.board.draw(self.canvas)
         self.draw_valid_moves(self.valid_moves)  # Draw the valid moves
         if self.turn == WHITE:
@@ -35,106 +35,88 @@ class Game:
     def reset(self):
         self._init()
 
-    # def select(self, row, col):
-    #     current_piece = self.board.get_piece(row, col)
-    #
-    #     if self.selected == (row, col):
-    #         current_piece.toggle_highlight()
-    #         self.valid_moves = {}  # Clear valid moves
-    #         self.selected = None
-    #         # self.update()
-    #         return
-    #     # Retrieve valid moves prioritizing captures
-    #     valid_moves = self.find_player_valid_moves()
-    #     # valid_moves = capture_moves if capture_moves else other_moves
-    #
-    #     # If there's a currently selected piece and the clicked square is different
-    #     if self.selected and (row, col) != self.selected:
-    #         selected_row, selected_col = self.selected
-    #
-    #         # Check if the clicked square is within valid moves for the selected piece
-    #         if (row, col) in self.valid_moves:
-    #             self._move(selected_row, selected_col, row, col)  # Execute the move
-    #             self.selected = None  # Deselect the piece after moving
-    #         else:
-    #             # If another piece is clicked, check if it has valid moves and select it
-    #             if current_piece and current_piece.color == self.turn and (row, col) in valid_moves:
-    #                 self.board.get_piece(selected_row,
-    #                                      selected_col).toggle_highlight()  # Remove highlight from previously selected piece
-    #                 current_piece.toggle_highlight()  # Highlight the newly selected piece
-    #                 self.selected = (row, col)  # Select the new piece
-    #                 self.valid_moves = valid_moves[(row, col)]  # Update valid moves for the new selection
-    #             else:
-    #                 return
-    #
-    #     elif current_piece and current_piece.color == self.turn and (row, col) in valid_moves:
-    #         current_piece.toggle_highlight()  # Highlight the clicked piece
-    #         self.selected = (row, col)  # Select the clicked piece
-    #         self.valid_moves = valid_moves[(row, col)]  # Store its valid moves
-    #
-    #     self.update()  # Update the board
+    def set_difficulty(self, difficulty):
+        self.difficulty = difficulty
+        self.reset()  # Reset the game state when the difficulty changes
 
     def select(self, row, col):
+        # Retrieve the piece at the clicked square (if any)
         current_piece = self.board.get_piece(row, col)
-        print("Selected:", self.selected, "Current:", (row, col))
-        # self.board.draw(self.canvas)
 
-        if self.selected == (row, col):  # Deselect if the same piece is clicked
-            print("Same piece clicked")
+        # Check if there is no piece at the selected square and no piece currently selected
+        if not current_piece and not self.selected:
+            return False, "No piece at the selected square."
+
+        # Check if the same piece is clicked again (deselect if so)
+        if self.selected == (row, col):
             current_piece.toggle_highlight()
-            self.valid_moves = {}  # Clear valid moves
+            self.valid_moves = {}  # Clear valid moves since we are deselecting
             self.selected = None
-            self.update()
-            return
+            self.update()  # Update the UI to reflect the deselection
+            return False, "Piece deselected."
 
+        # Retrieve all valid moves for the current player
         valid_moves = self.find_player_valid_moves()
 
+        # If a piece is already selected and a new square is clicked
         if self.selected and (row, col) != self.selected:
             selected_row, selected_col = self.selected
-            if (row, col) in self.valid_moves:  # Move if a valid move is clicked
+
+            # If the new square is within the valid moves, perform the move
+            if (row, col) in self.valid_moves:
                 self._move(selected_row, selected_col, row, col)
                 self.selected = None  # Deselect the piece after moving
-                self.update()  # Only update here after a move
-                # self.board.draw(self.canvas)
-                return
+                self.update()  # Update the UI to reflect the new board state
+                return True, f"Move performed successfully to {row}, {col}"
+
+            # If another piece is clicked and it's a valid move, switch selection
             elif current_piece and current_piece.color == self.turn and (row, col) in valid_moves:
-                self.board.get_piece(selected_row, selected_col).toggle_highlight()  # Remove highlight
-                current_piece.toggle_highlight()  # Highlight the new piece
+                self.board.get_piece(selected_row,
+                                     selected_col).toggle_highlight()  # Remove highlight from previously selected piece
+                current_piece.toggle_highlight()  # Highlight the newly selected piece
                 self.selected = (row, col)
                 self.valid_moves = valid_moves[(row, col)]
-            else:
-                return  # Do nothing if an invalid area is clicked
+                self.update()  # Update the UI to show the new selection
+                return True, f"Selection changed to {row}, {col}"
 
+            # If the click is neither a valid move nor a valid selection, return an error
+            else:
+                return False, "Invalid move: Move not allowed."
+
+        # If a piece of the current player's color is clicked, select it
         elif current_piece and current_piece.color == self.turn and (row, col) in valid_moves:
             current_piece.toggle_highlight()  # Highlight the clicked piece
             self.selected = (row, col)
             self.valid_moves = valid_moves[(row, col)]
+            self.update()  # Update the UI to show the selection
+            return True, f"Piece selected at {row}, {col}"
 
-        self.update()
-        # self.draw_valid_moves(self.valid_moves)
+        # If none of the above conditions are met, return a generic error message
+        self.update()  # Update the UI in case there are other changes to reflect
+        return False, "It's not your turn or piece cannot be moved."
 
     def _move(self, start_row, start_col, end_row, end_col):
-        if self.selected and (end_row, end_col) in self.valid_moves:
+        """Move the selected piece to the target square if the move is valid.
+        If a capture move is available, the piece must make the capture.
+        If a piece is captured, it is removed from the board."""
+        if self.selected and (end_row, end_col) in self.valid_moves: # Ensure a valid move is selected
             moving_piece = self.board.get_piece(start_row, start_col)
             moving_piece.toggle_highlight()  # Toggle highlight off before moving
             self.board.move_piece(start_row, start_col, end_row, end_col)
 
             move_info = self.valid_moves[(end_row, end_col)]
             captures = move_info['captures']
-            if captures:
+            if captures: # If a capture move is made, remove the captured pieces
                 regicide_occurred = self.board.remove(captures, moving_piece)
-                if regicide_occurred:
+                if regicide_occurred:  # If a normal piece captures a King, it is instantly crowned King
                     self.end_turn()
                     return True
             self.end_turn()
-            # self.selected = None
-            # self.board.draw(self.canvas)
-            # self.root.after(100, self.change_turn)
-            # self.change_turn()
+
             return True
         return False
 
-    def draw_valid_moves(self, valid_moves):
+    def draw_valid_moves(self, valid_moves):  # Draw valid moves on the board
         for final_move, move_info in valid_moves.items():
             # captures = move_info.get('captures', [])
             landing_positions = move_info.get('landing_positions', [])
@@ -158,18 +140,9 @@ class Game:
                     outline='blue', fill='', width=2
                 )
 
-        # # Optionally draw a different style if the move involves a capture
-        # if captures:
-        #     for cap in captures:
-        #         capture_row, capture_col = cap
-        #         cx = capture_col * SQUARE_SIZE + SQUARE_SIZE // 2
-        #         cy = capture_row * SQUARE_SIZE + SQUARE_SIZE // 2
-        #         self.canvas.create_oval(
-        #             cx - 15, cy - 15, cx + 15, cy + 15,
-        #             outline='red', fill='', width=2
-        #         )
-
     def find_player_valid_moves(self):
+        """Find all valid moves for the current player. If any captures are available, only return capture moves.
+        Otherwise, return all valid moves."""
         player_valid_moves = {}
         player_capture_moves = {}
         for row in range(ROWS):
@@ -183,34 +156,19 @@ class Game:
                         player_valid_moves[(row, col)] = valid_moves
         return player_capture_moves if player_capture_moves else player_valid_moves
 
-    def highlight_pieces_with_moves(self, valid_moves):
+    def highlight_pieces_with_moves(self, valid_moves): # Highlight pieces with valid moves
         for position, moves in valid_moves.items():
             piece = self.board.get_piece(*position)
             if moves:
                 piece.highlight_valid_move()
 
-    def clear_valid_move_highlights(self):
+    def clear_valid_move_highlights(self):  # Clear highlights from all pieces
         if self.board is not None:
             for row in range(ROWS):
                 for col in range(COLS):
                     piece = self.board.get_piece(row, col)
                     if piece and piece.is_valid_move_highlighted:
                         piece.unhighlight_valid_move()
-        # self.update()
-
-    # def check_winner(self, board=None):
-    #     if board is None:
-    #         board = self.board  # Fallback to the main game board if none provided
-    #     if not board:
-    #         print("No board available to check winner.")
-    #         return False  # Safeguard against None board
-    #     winner = board.winner()
-    #     if winner:
-    #         print(f'{winner} has won the game!')
-    #         # self.update()
-    #         messagebox.showinfo("Game Over", f"{winner} has won the game!")
-    #         return True
-    #     return False
 
     def check_winner(self, board=None):
         if board is None:
@@ -219,7 +177,7 @@ class Game:
             return False
         winner = board.winner()
         if winner:
-            self.winner = winner  # Store the winner for later use
+            self.winner = winner
             return True
         return False
 
@@ -240,8 +198,6 @@ class Game:
         self.change_turn()
         self.update()
         self.root.after(50, self.post_update_check_winner)  # Short delay to update UI before checking winner
-        # if self.check_winner():
-        #     self.handle_game_end()
 
     def post_update_check_winner(self):
         if self.check_winner():
@@ -255,6 +211,8 @@ class Game:
         self.root.after(100, self.reset)
 
     def ai_turn(self):
+        """AI makes a move based on the selected difficulty level.
+        The AI uses the minimax algorithm with alpha-beta pruning to determine the best move."""
         if self.check_winner():
             return
         best_score = float('-inf')
@@ -299,12 +257,6 @@ class Game:
             return min_eval
 
     def get_successors(self, board):
-        """
-        The function generates all possible successor states for the current player
-        finds all valid moves for the current player
-        :param board: current board state
-        :return:  list of tuples (move, board) representing all possible successor states
-        """
         successors = []
         valid_moves = self.find_player_valid_moves()
         for pos, moves_dict in valid_moves.items():
@@ -332,29 +284,6 @@ class Game:
     def evaluate_simple(self, board):
         score = (board.white_left - board.red_left) + (board.white_kings * 1.5 - board.red_kings * 1.5)
         return score if self.turn == WHITE else -score
-
-    # def evaluate_strategic(self, board):
-    #     score = 0
-    #     for row in range(len(board.board)):
-    #         for col in range(len(board.board[row])):
-    #             piece = board.get_piece(row, col)
-    #             if piece:
-    #                 # Calculate positional value
-    #                 position_value = 1 + (7 - abs(3.5 - col)) * 0.1  # central pieces are slightly more valuable
-    #                 if piece.color == WHITE:
-    #                     score += position_value * (1 if not piece.king else 1.5)
-    #                 else:
-    #                     score -= position_value * (1 if not piece.king else 1.5)
-    #
-    #                 # Calculate mobility value
-    #                 moves = len(board.get_valid_moves(piece, row, col))
-    #                 mobility_value = moves * 0.1
-    #                 if piece.color == WHITE:
-    #                     score += mobility_value
-    #                 else:
-    #                     score -= mobility_value
-    #
-    #     return score if self.turn == WHITE else -score
 
     def evaluate_strategic(self, board):
         score = 0
