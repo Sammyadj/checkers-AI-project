@@ -1,8 +1,8 @@
 from constants import RED, WHITE, ROWS, COLS, SQUARE_SIZE
 from board import Board
 from tkinter import messagebox
+from copy import deepcopy
 import traceback
-import time
 
 
 class Game:
@@ -16,8 +16,8 @@ class Game:
     def _init(self):
 
         self.selected = None
-        self.board = Board(self)
-        self.board.load_images()
+        self.board = Board()
+        # self.board.load_images()
         self.turn = RED
         self.valid_moves = {}  # Store the valid moves for the selected piece
         player_valid_moves = self.find_player_valid_moves()
@@ -25,7 +25,7 @@ class Game:
         self.update()
 
     def update(self):
-        print("Update called from:", traceback.extract_stack()[-2].name)
+        # print("Update called from:", traceback.extract_stack()[-2].name)
         # traceback.print_stack(limit=2)
         self.board.draw(self.canvas)
         self.draw_valid_moves(self.valid_moves)  # Draw the valid moves
@@ -35,49 +35,9 @@ class Game:
     def reset(self):
         self._init()
 
-    # def select(self, row, col):
-    #     current_piece = self.board.get_piece(row, col)
-    #
-    #     if self.selected == (row, col):
-    #         current_piece.toggle_highlight()
-    #         self.valid_moves = {}  # Clear valid moves
-    #         self.selected = None
-    #         # self.update()
-    #         return
-    #     # Retrieve valid moves prioritizing captures
-    #     valid_moves = self.find_player_valid_moves()
-    #     # valid_moves = capture_moves if capture_moves else other_moves
-    #
-    #     # If there's a currently selected piece and the clicked square is different
-    #     if self.selected and (row, col) != self.selected:
-    #         selected_row, selected_col = self.selected
-    #
-    #         # Check if the clicked square is within valid moves for the selected piece
-    #         if (row, col) in self.valid_moves:
-    #             self._move(selected_row, selected_col, row, col)  # Execute the move
-    #             self.selected = None  # Deselect the piece after moving
-    #         else:
-    #             # If another piece is clicked, check if it has valid moves and select it
-    #             if current_piece and current_piece.color == self.turn and (row, col) in valid_moves:
-    #                 self.board.get_piece(selected_row,
-    #                                      selected_col).toggle_highlight()  # Remove highlight from previously selected piece
-    #                 current_piece.toggle_highlight()  # Highlight the newly selected piece
-    #                 self.selected = (row, col)  # Select the new piece
-    #                 self.valid_moves = valid_moves[(row, col)]  # Update valid moves for the new selection
-    #             else:
-    #                 return
-    #
-    #     elif current_piece and current_piece.color == self.turn and (row, col) in valid_moves:
-    #         current_piece.toggle_highlight()  # Highlight the clicked piece
-    #         self.selected = (row, col)  # Select the clicked piece
-    #         self.valid_moves = valid_moves[(row, col)]  # Store its valid moves
-    #
-    #     self.update()  # Update the board
-
     def select(self, row, col):
         current_piece = self.board.get_piece(row, col)
         print("Selected:", self.selected, "Current:", (row, col))
-        # self.board.draw(self.canvas)
 
         if self.selected == (row, col):  # Deselect if the same piece is clicked
             print("Same piece clicked")
@@ -88,14 +48,15 @@ class Game:
             return
 
         valid_moves = self.find_player_valid_moves()
+        print("Valid moves Human:", valid_moves)
 
         if self.selected and (row, col) != self.selected:
             selected_row, selected_col = self.selected
-            if (row, col) in self.valid_moves:  # Move if a valid move is clicked
+            if (row, col) in self.valid_moves:
+                # Move if a valid move is clicked
                 self._move(selected_row, selected_col, row, col)
                 self.selected = None  # Deselect the piece after moving
                 self.update()  # Only update here after a move
-                # self.board.draw(self.canvas)
                 return
             elif current_piece and current_piece.color == self.turn and (row, col) in valid_moves:
                 self.board.get_piece(selected_row, selected_col).toggle_highlight()  # Remove highlight
@@ -111,10 +72,9 @@ class Game:
             self.valid_moves = valid_moves[(row, col)]
 
         self.update()
-        # self.draw_valid_moves(self.valid_moves)
 
     def _move(self, start_row, start_col, end_row, end_col):
-        if self.selected and (end_row, end_col) in self.valid_moves:
+        if self.selected is not None and (end_row, end_col) in self.valid_moves:
             moving_piece = self.board.get_piece(start_row, start_col)
             moving_piece.toggle_highlight()  # Toggle highlight off before moving
             self.board.move_piece(start_row, start_col, end_row, end_col)
@@ -127,17 +87,13 @@ class Game:
                     self.end_turn()
                     return True
             self.end_turn()
-            # self.selected = None
-            # self.board.draw(self.canvas)
-            # self.root.after(100, self.change_turn)
-            # self.change_turn()
             return True
         return False
 
     def draw_valid_moves(self, valid_moves):
         for final_move, move_info in valid_moves.items():
             # captures = move_info.get('captures', [])
-            landing_positions = move_info.get('landing_positions', [])
+            landing_positions = move_info.get('between_positions', [])
 
             # Draw the final landing position with a distinctive style
             final_row, final_col = final_move
@@ -157,17 +113,6 @@ class Game:
                     land_x - 8, land_y - 8, land_x + 8, land_y + 8,
                     outline='blue', fill='', width=2
                 )
-
-        # # Optionally draw a different style if the move involves a capture
-        # if captures:
-        #     for cap in captures:
-        #         capture_row, capture_col = cap
-        #         cx = capture_col * SQUARE_SIZE + SQUARE_SIZE // 2
-        #         cy = capture_row * SQUARE_SIZE + SQUARE_SIZE // 2
-        #         self.canvas.create_oval(
-        #             cx - 15, cy - 15, cx + 15, cy + 15,
-        #             outline='red', fill='', width=2
-        #         )
 
     def find_player_valid_moves(self):
         player_valid_moves = {}
@@ -196,21 +141,6 @@ class Game:
                     piece = self.board.get_piece(row, col)
                     if piece and piece.is_valid_move_highlighted:
                         piece.unhighlight_valid_move()
-        # self.update()
-
-    # def check_winner(self, board=None):
-    #     if board is None:
-    #         board = self.board  # Fallback to the main game board if none provided
-    #     if not board:
-    #         print("No board available to check winner.")
-    #         return False  # Safeguard against None board
-    #     winner = board.winner()
-    #     if winner:
-    #         print(f'{winner} has won the game!')
-    #         # self.update()
-    #         messagebox.showinfo("Game Over", f"{winner} has won the game!")
-    #         return True
-    #     return False
 
     def check_winner(self, board=None):
         if board is None:
@@ -240,8 +170,6 @@ class Game:
         self.change_turn()
         self.update()
         self.root.after(50, self.post_update_check_winner)  # Short delay to update UI before checking winner
-        # if self.check_winner():
-        #     self.handle_game_end()
 
     def post_update_check_winner(self):
         if self.check_winner():
@@ -260,8 +188,8 @@ class Game:
         best_score = float('-inf')
         # best_move = None
         best_board = None
-        for move, cloned_board in self.get_successors(self.board):
-            score = self.minimax(cloned_board, 6, -float('inf'), float('inf'), True)
+        for move, cloned_board, turn in self.get_successors(self.board, WHITE):
+            score = self.minimax(cloned_board, 4, -float('inf'), float('inf'), True)
             if score > best_score:
                 best_score = score
                 # best_move = move
@@ -276,47 +204,81 @@ class Game:
         self.end_turn()
 
     def minimax(self, board, depth, alpha, beta, maximizing_player):
+        print(f"{'Maximizing' if maximizing_player else 'Minimizing'} at depth {depth}")
         if depth == 0 or self.check_winner(board):
-            return self.evaluate(board)
+            score = self.evaluate(board)
+            print(f"Evaluating board at depth {depth}: {score}")
+            return score
 
         if maximizing_player:
             max_eval = float('-inf')
-            for _, successor in self.get_successors(board):
+            for move, successor, turn in self.get_successors(board, WHITE):
                 _eval = self.minimax(successor, depth - 1, alpha, beta, False)
                 max_eval = max(max_eval, _eval)
                 alpha = max(alpha, _eval)
                 if beta <= alpha:
+                    print("Pruning branches in maximizing at depth", depth)
                     break
             return max_eval
         else:
             min_eval = float('inf')
-            for _, successor in self.get_successors(board):
+            for move, successor, turn in self.get_successors(board, RED):
                 _eval = self.minimax(successor, depth - 1, alpha, beta, True)
                 min_eval = min(min_eval, _eval)
                 beta = min(beta, _eval)
                 if beta <= alpha:
+                    print("Pruning branches in minimizing at depth", depth)
                     break
             return min_eval
 
-    def get_successors(self, board):
-        """
-        The function generates all possible successor states for the current player
-        finds all valid moves for the current player
-        :param board: current board state
-        :return:  list of tuples (move, board) representing all possible successor states
-        """
+    # def get_successors(self, board, current_turn):
+    #     successors = []
+    #     # valid_moves = self.find_player_valid_moves()  # Get all valid moves for the AI
+    #     valid_moves = {pos: moves for pos, moves in self.find_player_valid_moves().items() if moves}
+    #     print("Pieces with valid moves:", len(valid_moves))
+    #
+    #     print(f"Valid moves AI: {valid_moves}")
+    #     for pos, moves_dict in valid_moves.items():
+    #         for move, details in moves_dict.items():
+    #             cloned_board = deepcopy(board)
+    #             # print(f"Cloning board: {id(board)} to {id(cloned_board)}")
+    #             moving_piece = cloned_board.get_piece(pos[0], pos[1])
+    #             cloned_board.move_piece(pos[0], pos[1], move[0], move[1])
+    #             captures = details.get('captures', [])
+    #             if captures:
+    #                 cloned_board.remove(captures, moving_piece)
+    #             # print(f"Move from {pos} to {move} resulting in board:")
+    #             # print(cloned_board)
+    #             successors.append((move, cloned_board))
+    #     return successors
+
+    def get_successors(self, board, current_turn):
         successors = []
-        valid_moves = self.find_player_valid_moves()
+        original_turn = self.turn  # Store the original turn
+        self.turn = current_turn  # Set the turn to the current turn for the simulation
+
+        valid_moves = {pos: moves for pos, moves in self.find_player_valid_moves().items() if moves}
+        print(f"Valid moves for {'AI' if current_turn == WHITE else 'Human'}: {valid_moves}")
+        print("Pieces with valid moves:", len(valid_moves))
+
         for pos, moves_dict in valid_moves.items():
             for move, details in moves_dict.items():
-                cloned_board = board.clone()
-                moving_piece = cloned_board.get_piece(pos[0], pos[1])
-                cloned_board.move_piece(pos[0], pos[1], move[0], move[1])
-                captures = details.get('captures', [])
-                if captures:
-                    cloned_board.remove(captures, moving_piece)
-                successors.append((move, cloned_board))
+                new_board = self.simulate_move(deepcopy(board), pos, move, details)
+                next_turn = RED if current_turn == WHITE else WHITE
+                successors.append((move, new_board, next_turn))
+
+        self.turn = original_turn  # Restore the original turn after simulation
         return successors
+
+    def simulate_move(self, board, start_pos, end_pos, move_info):
+        moving_piece = board.get_piece(start_pos[0], start_pos[1])
+        board.move_piece(start_pos[0], start_pos[1], end_pos[0], end_pos[1])
+        print(f"Simulating move from {start_pos} to {end_pos} resulting in board:")
+        print(id(board))
+        # captures = move_info.get('captures', [])
+        # if captures:
+        #     board.remove(captures, moving_piece)
+        return board
 
     # HEURISTIC EVALUATION FUNCTION WITH DIFFICULTY LEVELS
     def evaluate(self, board):
@@ -448,33 +410,57 @@ class Game:
             for col in range(len(board.board[row])):
                 piece = board.get_piece(row, col)
                 if piece:
-                    # Define base values
-                    base_value = 5 if not piece.king else 7.75
+                    # Basic value adjustments
+                    piece_score = 5 if not piece.king else 7.75
+                    position_bonus = 0.5 if (row in [1, 2, 5, 6]) and (col in [2, 3, 4, 5]) else 0.1
 
-                    # Back row defense value
-                    back_row_value = 4 if (piece.color == WHITE and row == 7) or (
-                            piece.color == RED and row == 0) else 0
+                    # Captures significantly increase the piece's value
+                    moves_dict = board.get_valid_moves(piece, row, col)
+                    captures = any(details['captures'] for details in moves_dict.values())
+                    capture_bonus = 10 if captures else 0
 
-                    # Middle control values
-                    middle_box_value = 2.5 if (2 <= row <= 5) and (2 <= col <= 5) else 0
-                    middle_row_value = 0.5 if (2 <= row <= 5) and not (2 <= col <= 5) else 0
-
-                    # Vulnerability check
-                    vulnerable_value = -3 if self.is_piece_vulnerable(piece, row, col) else 0
-
-                    # Protection check
-                    protected_value = 3 if self.is_piece_protected(piece, row, col) else 0
-
-                    # Calculate total piece value considering all factors
-                    piece_value = (base_value + back_row_value + middle_box_value +
-                                   middle_row_value + vulnerable_value + protected_value)
-
+                    # Calculate total score considering penalties or bonuses
+                    piece_value = piece_score + position_bonus + capture_bonus
                     if piece.color == WHITE:
                         score += piece_value
                     else:
                         score -= piece_value
 
         return score if self.turn == WHITE else -score
+
+    # def evaluate_comprehensive(self, board):
+    #     score = 0
+    #     for row in range(len(board.board)):
+    #         for col in range(len(board.board[row])):
+    #             piece = board.get_piece(row, col)
+    #             if piece:
+    #                 # Define base values
+    #                 base_value = 5 if not piece.king else 7.75
+    #
+    #                 # Back row defense value
+    #                 back_row_value = 4 if (piece.color == WHITE and row == 7) or (
+    #                         piece.color == RED and row == 0) else 0
+    #
+    #                 # Middle control values
+    #                 middle_box_value = 2.5 if (2 <= row <= 5) and (2 <= col <= 5) else 0
+    #                 middle_row_value = 0.5 if (2 <= row <= 5) and not (2 <= col <= 5) else 0
+    #
+    #                 # Vulnerability check
+    #                 vulnerable_value = -3 if self.is_piece_vulnerable(piece, row, col) else 0
+    #
+    #                 # Protection check
+    #                 protected_value = 3 if self.is_piece_protected(piece, row, col) else 0
+    #
+    #                 # Calculate total piece value considering all factors
+    #                 piece_value = (base_value + back_row_value + middle_box_value +
+    #                                middle_row_value + vulnerable_value + protected_value)
+    #
+    #                 if piece.color == WHITE:
+    #                     score += piece_value
+    #                 else:
+    #                     score -= piece_value
+    #
+    #     return score if self.turn == WHITE else -score
 
     def is_piece_vulnerable(self, piece, row, col):
         directions = self.board.get_movement_directions(piece)

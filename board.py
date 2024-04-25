@@ -1,6 +1,7 @@
 import tkinter as tk
 from constants import ROWS, COLS, BLACK, WHITE, RED, GREY, SQUARE_SIZE, CROWN
 from piece import Piece
+from copy import deepcopy
 
 
 class Square:
@@ -9,13 +10,13 @@ class Square:
         self.row = None
         self.col = None
 
-    def clone(self):
-        new_square = Square()
-        if self.piece:
-            new_square.piece = self.piece.clone()
-        new_square.row = self.row
-        new_square.col = self.col
-        return new_square
+    # def clone(self):
+    #     new_square = Square()
+    #     if self.piece:
+    #         new_square.piece = self.piece.clone()
+    #     new_square.row = self.row
+    #     new_square.col = self.col
+    #     return new_square
 
     def set_position(self, row, col):
         self.row = row
@@ -37,38 +38,38 @@ class Square:
 
 
 class Board:
-    def __init__(self, game=None):
-        self.game = game
+    def __init__(self):
+        # self.game = game
         self.crown_image = None
         self.board = [[Square() for _ in range(COLS)] for _ in range(ROWS)]  # 8x8 board
         self.red_left = self.white_left = 12  # Number of pieces each player has
         self.red_kings = self.white_kings = 0
-        # self.load_images()
         self.setup_board()
 
-    def clone(self):
-        new_board = Board()
-        new_board.game = self.game  # Maintain the same game reference
-        new_board.crown_image = self.crown_image  # Maintain the same image reference
-        new_board.red_left = self.red_left
-        new_board.white_left = self.white_left
-        new_board.red_kings = self.red_kings
-        new_board.white_kings = self.white_kings
+    # def clone(self):
+    #     new_board = Board()
+    #     new_board.game = self.game  # Maintain the same game reference
+    #     new_board.crown_image = self.crown_image  # Maintain the same image reference
+    #     new_board.red_left = self.red_left
+    #     new_board.white_left = self.white_left
+    #     new_board.red_kings = self.red_kings
+    #     new_board.white_kings = self.white_kings
+    #
+    #     for i in range(ROWS):
+    #         for j in range(COLS):
+    #             new_board.board[i][j] = self.board[i][j].clone()  # Use the new clone method for squares
+    #
+    #     return new_board
 
-        for i in range(ROWS):
-            for j in range(COLS):
-                new_board.board[i][j] = self.board[i][j].clone()  # Use the new clone method for squares
+    # def clone(self):
+    #     # Create a deep copy of the entire board
+    #     return deepcopy(self)
 
-        return new_board
-
-    def load_images(self):
-        # if not self.crown_image:
-        #     self.crown_image = tk.PhotoImage(file=CROWN).subsample(64, 64)
-        try:
-            self.crown_image = tk.PhotoImage(file=CROWN).subsample(64, 64)
-            print("Crown image loaded successfully.")
-        except Exception as e:
-            print(f"Failed to load crown image: {e}")
+    # def load_images(self):
+    #     try:
+    #         self.crown_image = tk.PhotoImage(file=CROWN).subsample(64, 64) # Load the crown image and resize it
+    #     except Exception as e:
+    #         print(f"Failed to load crown image: {e}")
 
     @staticmethod
     def draw_squares(canvas):
@@ -86,10 +87,10 @@ class Board:
             for col in range(COLS):
                 if row % 2 == ((col + 1) % 2):
                     if row < 3:
-                        piece = Piece(row, col, WHITE, self, self.crown_image)
+                        piece = Piece(row, col, WHITE)
                         self.board[row][col].place_piece(piece)
                     elif row > 4:
-                        piece = Piece(row, col, RED, self, self.crown_image)
+                        piece = Piece(row, col, RED)
                         self.board[row][col].place_piece(piece)
 
     def draw(self, canvas):
@@ -165,7 +166,6 @@ class Board:
             return RED
 
         # Check for no available moves for either player
-        # We assume that this method is called after a player's turn is complete
         red_moves_available = self.check_moves_available(RED)
         white_moves_available = self.check_moves_available(WHITE)
 
@@ -260,7 +260,7 @@ class Board:
                     # Add the move as a key with an empty dictionary for its value
                     valid_moves[(next_row, next_col)] = {
                         'captures': [],
-                        'landing_positions': []
+                        'between_positions': []
                     }
         else:
             valid_moves.update(captures)
@@ -293,7 +293,7 @@ class Board:
                     else:
                         moves[(jump_row, jump_col)] = {
                             'captures': captures.copy(),
-                            'landing_positions': path.copy()
+                            'between_positions': path.copy()
                         }
                     # Backtracking: Remove the last capture
                     captures.pop()

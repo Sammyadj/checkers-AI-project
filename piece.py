@@ -5,13 +5,11 @@ class Piece:
     PADDING = 15
     OUTLINE = 2
 
-    def __init__(self, row, col, color, board, crown_image=None):
+    def __init__(self, row, col, color, king=False):
         self.row = row
         self.col = col
         self.color = color
-        self.board = board
-        self.king = False
-        self.crown = crown_image if crown_image else board.crown_image
+        self.king = king
         self.is_highlighted = False
         self.is_valid_move_highlighted = False
 
@@ -20,29 +18,24 @@ class Piece:
         self.y = 0
         self.calc_position()
 
-
-    def clone(self):
-        # Ensure that the board instance is passed to the new cloned piece
-        new_piece = Piece(self.row, self.col, self.color, self.board, self.crown)
-        new_piece.king = self.king
-        new_piece.is_highlighted = self.is_highlighted
-        new_piece.is_valid_move_highlighted = self.is_valid_move_highlighted
-        new_piece.calc_position()
-        return new_piece
+    # def clone(self):
+    #     # Ensure that the board instance is passed to the new cloned piece
+    #     new_piece = Piece(self.row, self.col, self.color, self.board, self.crown)
+    #     new_piece.king = self.king
+    #     new_piece.is_highlighted = self.is_highlighted
+    #     new_piece.is_valid_move_highlighted = self.is_valid_move_highlighted
+    #     new_piece.calc_position()
+    #     return new_piece
 
     def calc_position(self):
         # Calculate the center of the square
         self.x = SQUARE_SIZE * self.col + SQUARE_SIZE // 2
         self.y = SQUARE_SIZE * self.row + SQUARE_SIZE // 2
 
-    # def make_king(self):
-    #     self.king = True
-    #     print(f"Made {self.color} piece at ({self.row}, {self.col}) a king.")
-
     def make_king(self):
         self.king = True
-        if not self.crown:  # Set the crown image from the board if not already set
-            self.crown = self.board.crown_image
+        # if not self.crown:  # Set the crown image from the board if not already set
+        #     self.crown = self.board.crown_image
 
     def draw(self, canvas):
         # Calculate the radius for the piece
@@ -66,24 +59,9 @@ class Piece:
             )
 
         # If the piece is a king, draw the crown image on top of it
-        if self.king and self.crown:
-            print("Drawing crown image.")
-            canvas.create_image(self.x, self.y, image=self.crown)
-
-    # def draw(self, canvas):
-    #     # Calculate the radius for the piece
-    #     radius = SQUARE_SIZE // 2 - self.PADDING
-    #     outline_color = 'yellow' if self.is_highlighted else ''
-    #     outline_width = 4 if self.is_highlighted else 0
-    #     # Draw the piece on the board
-    #     if self.is_highlighted:
-    #         canvas.create_oval(
-    #             self.x - radius, self.y - radius,
-    #             self.x + radius, self.y + radius,
-    #             fill=self.color, outline=outline_color, width=outline_width)
-
-    #         if self.king and self.crown:
-    #             canvas.create_image(self.x, self.y, image=self.crown)
+        if self.king:
+            # canvas.create_image(self.x, self.y, image=self.crown)
+            canvas.create_text(self.x, self.y, text="K", fill='black', font=('Arial', 24))
 
     def toggle_highlight(self):
         self.is_highlighted = not self.is_highlighted  # Toggle the highlight state
