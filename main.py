@@ -6,7 +6,7 @@ from game import Game
 
 def dislay_instructions():
     messagebox.showinfo("Instructions", """Game interactivity:
-- Click on a piece to select it.
+- You can click on a piece to select it.
 - Click on a highlighted square to move the selected piece.
 - Click on the selected piece again to deselect it.
 - Click on the 'Reset Game' button to start a new game.
