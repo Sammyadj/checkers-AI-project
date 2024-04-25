@@ -4,6 +4,15 @@ from constants import WIDTH, HEIGHT, SQUARE_SIZE
 from game import Game
 
 
+def dislay_instructions():
+    messagebox.showinfo("Instructions", """Game interactivity:
+- Click on a piece to select it.
+- Click on a highlighted square to move the selected piece.
+- Click on the selected piece again to deselect it.
+- Click on the 'Reset Game' button to start a new game.
+- Click on the 'Show Rules' button to display the game rules.
+- Use the radio buttons to change the AI difficulty.""")
+
 def display_rules():
     # Create a top-level window to display rules
     rule_window = Toplevel()
@@ -54,6 +63,9 @@ def main():
 
     rules_button = tk.Button(root, text="Show Rules", command=display_rules)
     rules_button.pack(side=tk.RIGHT, padx=10, pady=10)
+
+    instructions_button = tk.Button(root, text="Instructions", command=dislay_instructions)
+    instructions_button.pack(side=tk.RIGHT, padx=10, pady=10)
 
     canvas.bind("<Button-1>", lambda event: mouse_click(event, game))
 
